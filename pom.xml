@@ -34,6 +34,7 @@
 			<artifactId>spring-boot-starter-security</artifactId>
 		</dependency>
 
+
 		<!-- Auto reload feature-->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

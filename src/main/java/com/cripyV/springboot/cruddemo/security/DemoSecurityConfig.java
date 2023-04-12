@@ -4,6 +4,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.jdbc.JdbcDaoImpl;
 import org.springframework.security.provisioning.JdbcUserDetailsManager;
 import org.springframework.security.provisioning.UserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
@@ -15,13 +17,21 @@ public class DemoSecurityConfig {
 
     //Add support for jdbc to use the database instead of hardcoding
     @Bean
-    public UserDetailsManager userDetailsManager(DataSource dataSource){
-        return new JdbcUserDetailsManager(dataSource);
+    public UserDetailsService userDetailsService(DataSource dataSource) {
+        JdbcDaoImpl jdbcDao = new JdbcDaoImpl();
+        jdbcDao.setDataSource(dataSource);
+
+        // Set the custom SQL query to fetch user details from a different table
+        jdbcDao.setUsersByUsernameQuery("SELECT user_id, pw, active FROM members WHERE user_id=?");
+        jdbcDao.setAuthoritiesByUsernameQuery("SELECT user_id, role FROM roles WHERE user_id=?");
+
+        return jdbcDao;
     }
 
 
+
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception{
+    public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception {
 
         httpSecurity.authorizeHttpRequests(configurer ->
                 configurer
@@ -29,11 +39,10 @@ public class DemoSecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/employees/**").hasRole("EMPLOYEE")
                         .requestMatchers(HttpMethod.POST, "/api/v1/employees").hasRole("MANAGER")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/employees").hasRole("MANAGER")
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/employees/**").hasRole("ADMIN")
-        );
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/employees/**").hasRole("ADMIN"));
         httpSecurity.httpBasic();
 
-        //disable the crossforgery, normally not required for stateless API taht use POST,PUT,DELETE or/and PATCH;
+        //disable the crossforgery, normally not required for stateless API that use POST,PUT,DELETE or/and PATCH;
         httpSecurity.csrf().disable();
 
         return httpSecurity.build();
